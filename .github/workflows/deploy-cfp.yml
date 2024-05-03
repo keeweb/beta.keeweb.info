@@ -263,7 +263,6 @@ jobs:
 
           - name: "☁️ CF › Purge Cache"
             id: task_cloudflare_purge_cache
-            if: ${{ github.repository == 'keeweb/keeweb' }}
             run: |
               check=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_SITE_MAIN }}/purge_cache" \
                 -H "Authorization: Bearer ${{ secrets.CF_TOKEN }}" \
