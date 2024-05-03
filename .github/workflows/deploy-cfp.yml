@@ -1,0 +1,192 @@
+# ---------------------------------------------------------------------------------------
+#   Cloudflare Pages › Update keeweb.info Website
+#   Pushes a new version of the Keeweb.info website to Cloudflare
+#
+#   site available at:
+#     - site-keeweb-beta.pages.dev
+# ---------------------------------------------------------------------------------------
+
+run-name: "☁️ CF › Deploy › beta.KeeWeb.info"
+name: "☁️ CF › beta.KeeWeb.info"
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+    inputs:
+
+      # ---------------------------------------------------------------------------------------
+      #   The default values set for each input should not need to be changed as they are
+      #   already set to the correct values.
+      # ---------------------------------------------------------------------------------------
+
+      PROJECT_NAME:
+        description:  "Project Name"
+        required:     true
+        default:      'site-keeweb-beta'
+        type:         string
+
+      DIRECTORY_BUILD_OUTPUT:
+        description:  "Build Output Dir"
+        required:     true
+        default:      './'
+        type:         string
+
+      DIRECTORY_ROOT:
+        description:  "Root Dir"
+        required:     true
+        default:      './'
+        type:         string
+
+      WRANGLER_VERSION:
+        description:  "Wrangler Version"
+        required:     true
+        default:      '3'
+        type:         string
+
+      BRANCH:
+        description:  'Website Branch'
+        required:     true
+        default:      'master'
+        type:         choice
+        options:
+        - master
+        - main
+        - develop
+
+jobs:
+
+    # ---------------------------------------------------------------------------------------
+    #   JOB > PUBLISH
+    # ---------------------------------------------------------------------------------------
+
+    job-cfpublish:
+        name: >-
+          ☁️ Publish beta.KeeWeb.info
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            deployments: write
+            id-token: write
+        steps:
+
+          - name: "✅ Start Publish"
+            id: task_cfpublish_start
+            run: |
+              echo "Publishing new version of beta.KeeWeb.info to Cloudflare Pages service"
+
+          # ---------------------------------------------------------------------------------------
+          #   Job > Publish > Checkout
+          # ---------------------------------------------------------------------------------------
+
+          - name: "☑️ Checkout"
+            id: task_cfpublish_checkout
+            uses: actions/checkout@v4
+            with:
+              fetch-depth: 0
+
+          # ---------------------------------------------------------------------------------------
+          #   CLOUDFLARE > NODE > SETUP
+          # ---------------------------------------------------------------------------------------
+
+          - name: "⚙️ Setup › Node"
+            id: task_cfpublish_node_setup
+            uses: actions/setup-node@v4
+            with:
+              node-version: '20.x'
+              scope: '@aetherinox'
+
+          # ---------------------------------------------------------------------------------------
+          #   CLOUDFLARE > NODE > INSTALL
+          # ---------------------------------------------------------------------------------------
+
+          - name: "📦 NPM › Install Wrangler"
+            id: task_cloudflare_npm_install
+            run: |
+              npm install -g npm@latest
+              npm install --global wrangler
+            env:
+              NODE_AUTH_TOKEN: ${{ secrets.SELF_TOKEN_CL }}
+
+          # ---------------------------------------------------------------------------------------
+          #   CLOUDFLARE > CHECK PROJECT
+          # ---------------------------------------------------------------------------------------
+
+          - name: "☁️ CF › Check Project"
+            shell: bash
+            id: check-project
+            run: |
+              check=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CF_ACCOUNT_ID }}/pages/projects/${{ inputs.PROJECT_NAME || 'site-keeweb-beta' }}" \
+                -H "Authorization: Bearer ${{ secrets.CF_TOKEN }}" \
+                -H "Content-Type:application/json" | jq -r '.success')
+              echo "result=$check" >> $GITHUB_OUTPUT
+
+          - name: "☁️ CF › Create Project (if nonexistent)"
+            shell: bash
+            if: steps.check-project.outputs.result != 'true'
+            run: |
+              curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CF_ACCOUNT_ID }}/pages/projects" \
+                -H "Authorization: Bearer ${{ secrets.CF_ACCOUNT_ID }}" \
+                -H "Content-Type:application/json" \
+                --data '{"name":"${{ inputs.PROJECT_NAME || 'site-keeweb-beta' }}", "production_branch":"${{ inputs.BRANCH || 'master' }}"}'
+
+          # ---------------------------------------------------------------------------------------
+          #   Job > Publish > Cloudflare Wrangler
+          # ---------------------------------------------------------------------------------------
+
+          #- name: "☁️ CF › Publish beta.KeeWeb.info"
+          #  uses: cloudflare/wrangler-action@v3
+          #  with:
+          #    apiToken: ${{ secrets.CF_TOKEN }}                                   # Cloudflare API Token at https://dash.cloudflare.com/profile/api-tokens
+          #    accountId: ${{ secrets.CF_ACCOUNT_ID }}                             # Cloudflare account ID available on right side of CF website
+          #    workingDirectory: ${{ inputs.DIRECTORY_ROOT || './' }}              # Working directory
+          #    command: pages deploy ${{ inputs.DIRECTORY_BUILD_OUTPUT || './' }} --project-name=${{ inputs.PROJECT_NAME || 'site-keeweb-beta' }} --commit-dirty=true
+
+          # ---------------------------------------------------------------------------------------
+          #   Cloudflare Pages Action
+          #
+          #   a new version has been supplied above to switch from
+          #   cloudflare/pages-action@v1 -> cloudflare/wrangler-action@v3
+          #   the new action uses NodeJS 20, instead of 16.
+          # ---------------------------------------------------------------------------------------
+
+          - name: "☁️ CF › Publish beta.KeeWeb.info"
+            uses: aetherinox/cloudflare-publish-action@latest
+            with:
+              apiToken: ${{ secrets.CF_TOKEN }}                                    # Cloudflare API Token at https://dash.cloudflare.com/profile/api-tokens
+              accountId: ${{ secrets.CF_ACCOUNT_ID }}                              # Cloudflare account ID available on right side of CF website
+              projectName: ${{ inputs.PROJECT_NAME || 'site-keeweb-beta' }}        # Project name assigned at creation. view on workers-and-pages section of CF website
+              directory: ${{ inputs.DIRECTORY_BUILD_OUTPUT || './' }}              # Output directory for built website
+              gitHubToken: ${{ secrets.SELF_TOKEN_CL }}                            # Optional: Enable this if you want to have GitHub Deployments triggered
+              branch: ${{ inputs.BRANCH || 'master' }}                             # Branch website published to; by default this will be the branch which triggered this workflow
+              workingDirectory: ${{ inputs.DIRECTORY_ROOT || './' }}               # Working directory
+              wranglerVersion: ${{ inputs.WRANGLER_VERSION || '3' }}               # Optional: Change the Wrangler version, allows you to point to a specific version or a tag such as `beta`
+
+    # ---------------------------------------------------------------------------------------
+    #   JOB > COMPLETE
+    # ---------------------------------------------------------------------------------------
+
+    job-complete:
+        name: >-
+          🆗 Successful Deployment
+        needs: job-cfpublish
+        runs-on: ubuntu-latest
+        steps:
+
+          # ---------------------------------------------------------------------------------------
+          #   Job > Complete > Get publish timestamp
+          # ---------------------------------------------------------------------------------------
+
+          - name: "🕛 Get Timestamp"
+            id: task_complete_timestamp_get
+            run: |
+              echo "NOW=$(date +'%m-%d-%Y %H:%M:%S')" >> $GITHUB_ENV
+
+          # ---------------------------------------------------------------------------------------
+          #   Job > Complete > Summary of publish
+          # ---------------------------------------------------------------------------------------
+
+          - name: "🆗 CF Pages Deployment: ${{ env.NOW }}"
+            id: task_complete_summary
+            run: |
+              echo "Successfully deployed cloudflare pages update @ ${{ env.NOW }}"
