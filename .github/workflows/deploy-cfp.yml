@@ -113,8 +113,8 @@ jobs:
           # ---------------------------------------------------------------------------------------
 
           - name: "☁️ CF › Check Project"
+            id: task_cloudflare_project_check
             shell: bash
-            id: check-project
             run: |
               check=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CF_ACCOUNT_ID }}/pages/projects/${{ inputs.PROJECT_NAME || 'site-keeweb-beta' }}" \
                 -H "Authorization: Bearer ${{ secrets.CF_TOKEN }}" \
@@ -122,11 +122,12 @@ jobs:
               echo "result=$check" >> $GITHUB_OUTPUT
 
           - name: "☁️ CF › Create Project (if nonexistent)"
+            id: task_cloudflare_project_create
             shell: bash
-            if: steps.check-project.outputs.result != 'true'
+            if: steps.task_cloudflare_project_check.outputs.result != 'true'
             run: |
               curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CF_ACCOUNT_ID }}/pages/projects" \
-                -H "Authorization: Bearer ${{ secrets.CF_ACCOUNT_ID }}" \
+                -H "Authorization: Bearer ${{ secrets.CF_TOKEN }}" \
                 -H "Content-Type:application/json" \
                 --data '{"name":"${{ inputs.PROJECT_NAME || 'site-keeweb-beta' }}", "production_branch":"${{ inputs.BRANCH || 'master' }}"}'
 
