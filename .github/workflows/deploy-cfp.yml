@@ -3,7 +3,7 @@
 #   Pushes a new version of the Keeweb.info website to Cloudflare
 #
 #   site available at:
-#     - site-keeweb-beta.pages.dev
+#     - beta-keeweb-info.pages.dev
 # ---------------------------------------------------------------------------------------
 
 run-name: "☁️ CF › Deploy › beta.KeeWeb.info"
@@ -23,7 +23,7 @@ on:
       PROJECT_NAME:
         description:  "Project Name"
         required:     true
-        default:      'site-keeweb-beta'
+        default:      'beta-keeweb-info'
         type:         string
 
       DIRECTORY_BUILD_OUTPUT:
@@ -116,7 +116,7 @@ jobs:
             id: task_cloudflare_project_check
             shell: bash
             run: |
-              check=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CF_ACCOUNT_ID }}/pages/projects/${{ inputs.PROJECT_NAME || 'site-keeweb-beta' }}" \
+              check=$(curl -s -X GET "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CF_ACCOUNT_ID }}/pages/projects/${{ inputs.PROJECT_NAME || 'beta-keeweb-info' }}" \
                 -H "Authorization: Bearer ${{ secrets.CF_TOKEN }}" \
                 -H "Content-Type:application/json" | jq -r '.success')
               echo "result=$check" >> $GITHUB_OUTPUT
@@ -129,7 +129,7 @@ jobs:
               curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/${{ secrets.CF_ACCOUNT_ID }}/pages/projects" \
                 -H "Authorization: Bearer ${{ secrets.CF_TOKEN }}" \
                 -H "Content-Type:application/json" \
-                --data '{"name":"${{ inputs.PROJECT_NAME || 'site-keeweb-beta' }}", "production_branch":"${{ inputs.BRANCH || 'master' }}"}'
+                --data '{"name":"${{ inputs.PROJECT_NAME || 'beta-keeweb-info' }}", "production_branch":"${{ inputs.BRANCH || 'master' }}"}'
 
           # ---------------------------------------------------------------------------------------
           #   Job > Publish > Cloudflare Wrangler
@@ -141,7 +141,7 @@ jobs:
           #    apiToken: ${{ secrets.CF_TOKEN }}                                   # Cloudflare API Token at https://dash.cloudflare.com/profile/api-tokens
           #    accountId: ${{ secrets.CF_ACCOUNT_ID }}                             # Cloudflare account ID available on right side of CF website
           #    workingDirectory: ${{ inputs.DIRECTORY_ROOT || './' }}              # Working directory
-          #    command: pages deploy ${{ inputs.DIRECTORY_BUILD_OUTPUT || './' }} --project-name=${{ inputs.PROJECT_NAME || 'site-keeweb-beta' }} --commit-dirty=true
+          #    command: pages deploy ${{ inputs.DIRECTORY_BUILD_OUTPUT || './' }} --project-name=${{ inputs.PROJECT_NAME || 'beta-keeweb-info' }} --commit-dirty=true
 
           # ---------------------------------------------------------------------------------------
           #   Cloudflare Pages Action
@@ -156,7 +156,7 @@ jobs:
             with:
               apiToken: ${{ secrets.CF_TOKEN }}                                    # Cloudflare API Token at https://dash.cloudflare.com/profile/api-tokens
               accountId: ${{ secrets.CF_ACCOUNT_ID }}                              # Cloudflare account ID available on right side of CF website
-              projectName: ${{ inputs.PROJECT_NAME || 'site-keeweb-beta' }}        # Project name assigned at creation. view on workers-and-pages section of CF website
+              projectName: ${{ inputs.PROJECT_NAME || 'beta-keeweb-info' }}        # Project name assigned at creation. view on workers-and-pages section of CF website
               directory: ${{ inputs.DIRECTORY_BUILD_OUTPUT || './' }}              # Output directory for built website
               gitHubToken: ${{ secrets.SELF_TOKEN_CL }}                            # Optional: Enable this if you want to have GitHub Deployments triggered
               branch: ${{ inputs.BRANCH || 'master' }}                             # Branch website published to; by default this will be the branch which triggered this workflow
